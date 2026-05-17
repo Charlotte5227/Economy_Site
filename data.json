@@ -1,0 +1,24 @@
+{
+  "countries": [
+    { "id": "countryA", "name": "国家A" },
+    { "id": "countryB", "name": "国家B" }
+  ],
+  "items": [
+    {
+      "id": "item_001",
+      "countryId": "countryA",
+      "name": "りんご",
+      "description": "とても甘いりんごです。",
+      "image": "images/img_12345.png",
+      "price": 150
+    },
+    {
+      "id": "item_002",
+      "countryId": "countryA",
+      "name": "鉄鉱石",
+      "description": "",
+      "image": "",
+      "price": 500
+    }
+  ]
+}
