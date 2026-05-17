@@ -1,4 +1,18 @@
 {
-  "countries": [],
-  "items": []
+  "countries": [
+    {
+      "id": "country_1778995569456",
+      "name": "テスト国"
+    }
+  ],
+  "items": [
+    {
+      "id": "item_1778995604069",
+      "countryId": "country_1778995569456",
+      "name": "テスト",
+      "description": "テスト用の商品です。",
+      "image": "",
+      "price": 150
+    }
+  ]
 }
