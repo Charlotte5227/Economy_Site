@@ -3,6 +3,10 @@
     {
       "id": "country_1778995569456",
       "name": "テスト国"
+    },
+    {
+      "id": "country_1778998151969",
+      "name": "テスト国その２"
     }
   ],
   "items": [
@@ -37,6 +41,14 @@
       "description": "画像と説明を同時に書いた場合の処理確認",
       "image": "image/img_1778998113204.png",
       "price": 100
+    },
+    {
+      "id": "item_1778998183662",
+      "countryId": "country_1778998151969",
+      "name": "複数国家ある場合の処理確認",
+      "description": "上記の通り",
+      "image": "",
+      "price": 500
     }
   ]
 }
