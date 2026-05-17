@@ -38,11 +38,47 @@
         .modal-content button { padding: 10px 40px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin: 5px; }
         #result-text { width: 100%; height: 150px; margin: 20px 0; color: black; padding: 10px; font-size: 1rem; }
         
-        /* スマホ対応 */
+        /* スマホ用のレスポンシブ対応（画面幅が768px以下の場合） */
         @media (max-width: 768px) {
-            .container { flex-direction: column; }
-            #country-list { width: 100%; height: auto; border-right: none; border-bottom: 2px solid #ccc; display: flex; overflow-x: auto; white-space: nowrap; }
-            .country-btn { width: auto; margin-bottom: 0; margin-right: 10px; flex-shrink: 0; }
+            /* ヘッダーの文字ズレ防止（縦並びにしてスッキリさせる） */
+            header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                padding: 10px;
+            }
+            .header-right {
+                text-align: center;
+                margin-top: 10px;
+            }
+            
+            /* コンテナの並び替え */
+            .container {
+                flex-direction: column;
+            }
+            
+            /* ▼ ここがポイント：国家一覧を完璧な横スクロールバーにする ▼ */
+            #country-list {
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #ccc;
+                display: flex;
+                flex-direction: row; /* 強制的に横並びにする */
+                flex-wrap: nowrap; /* ボタンが下に折り返されるのを絶対に防ぐ */
+                overflow-x: auto; /* 横スクロールをオンにする */
+                overflow-y: hidden; /* 縦スクロールを完全にオフにする */
+                -webkit-overflow-scrolling: touch; /* スマホの指でのスクロールを滑らかにする魔法のコード */
+                padding: 10px;
+            }
+            
+            .country-btn {
+                width: auto;
+                margin-bottom: 0;
+                margin-right: 10px;
+                flex-shrink: 0; /* 画面幅に合わせてボタンが勝手に縮むのを防ぐ */
+                white-space: nowrap; /* 国名が2行に改行されるのを防ぐ */
+            }
         }
     </style>
 </head>
