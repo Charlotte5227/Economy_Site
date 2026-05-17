@@ -7,16 +7,19 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: sans-serif; display: flex; height: 100vh; overflow: hidden; }
         
+        /* ログイン（トークン入力）モーダル */
+        #login-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.9); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+        .login-content { background-color: white; padding: 30px; border-radius: 8px; text-align: center; width: 400px; }
+        .login-content input { width: 100%; padding: 10px; margin: 15px 0; border: 1px solid #ccc; }
+        .login-content button { padding: 10px 20px; background-color: #333; color: white; border: none; cursor: pointer; font-weight: bold; width: 100%; }
+
         /* 左側：操作パネル */
         #control-panel { width: 350px; display: flex; flex-direction: column; border-right: 2px solid #333; overflow-y: auto; }
         .panel-section { padding: 15px; border-bottom: 2px solid #333; }
-        
-        /* 配色再現 */
         .color-purple { background-color: #ccccff; }
         .color-cyan { background-color: #ccffff; }
         .color-green { background-color: #ccffcc; }
         .color-yellow { background-color: #ffffcc; }
-        
         h3 { margin-bottom: 10px; font-size: 1rem; }
         .input-group { margin-bottom: 10px; }
         .input-group input, .input-group textarea, .input-group select { width: 100%; padding: 8px; border: 1px solid #333; }
@@ -27,26 +30,32 @@
         /* 右側：プレビュー領域 */
         #preview-area { flex-grow: 1; background-color: #ffcccc; padding: 20px; overflow-y: auto; }
         .preview-title { text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; -webkit-text-stroke: 1px white; }
-        
         #preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        .item-card { background-color: #fff; border: 1px solid #333; display: flex; flex-direction: column; height: 250px; position: relative; }
+        .item-card { background-color: #fff; border: 1px solid #333; display: flex; flex-direction: column; height: 250px; position: relative; cursor: pointer; }
         .item-name { text-align: center; padding: 10px; border-bottom: 1px solid #333; font-weight: bold; }
         .item-content { flex-grow: 1; padding: 10px; text-align: center; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; overflow: hidden; }
         .item-content img { max-width: 100%; max-height: 100px; object-fit: contain; }
         .item-price { width: 100%; padding: 15px; background-color: #f9f9f9; border-top: 1px solid #333; text-align: center; font-weight: bold; }
-        
-        /* 選択状態 */
         .selected-card { border: 3px solid red; }
     </style>
 </head>
 <body>
+
+    <div id="login-modal">
+        <div class="login-content">
+            <h2>管理システム ログイン</h2>
+            <p style="font-size: 0.8rem; color: #666; margin-top: 10px;">GitHubのPersonal Access Tokenを入力してください</p>
+            <input type="password" id="input-token" placeholder="ghp_xxxxxxxxxxxx...">
+            <button onclick="login()">ログイン</button>
+        </div>
+    </div>
 
     <div id="control-panel">
         <div class="panel-section color-purple">
             <button class="btn btn-save" onclick="saveDataToGitHub()">変更内容<br>保存ボタン</button>
             <p><strong>国家データ</strong></p>
             <p>国家名：<span id="info-country-name">未選択</span></p>
-            <p>本日の売り上げ：<span id="info-sales">---</span> 円</p>
+            <p>総売り上げ：<span id="info-sales">読込中...</span> 円</p>
             <p>商品数：<span id="info-item-count">0</span></p>
         </div>
 
@@ -96,83 +105,113 @@
     </div>
 
     <script>
-        // =========================================================
-        // 【▼ 要変更 ▼】 GitHubリポジトリの情報を入力してください
-        // =========================================================
-        const GITHUB_TOKEN = "ここにGitHubのPersonal Access Tokenを貼り付け";
-        const REPO_OWNER = "あなたのGitHubユーザー名";
-        const REPO_NAME = "リポジトリ名";
-        const DATA_FILE_PATH = "data.json";
-        // =========================================================
+        // =========================================================================
+        // 【★★★ 必須設定箇所 ★★★】 以下の3つをあなたの環境に合わせて書き換えてください
+        // =========================================================================
+        
+        // 1. あなたのGitHubユーザー名（例: "my-account-name"）
+        const REPO_OWNER = "Charlotte5227"; 
+        
+        // 2. 作成したGitHubリポジトリ名（例: "world-economy-game"）
+        const REPO_NAME = "Economy_Site"; 
+        
+        // 3. 【新しいデプロイ】で発行されたGASのウェブアプリURL
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzwKCQbkKFs-WcxUBkxaF1xGWVRueg4aNUHkLwcmiSA7slNznaUGaqVVc6xt3tFTmyLLA/exec"; 
+        
+        // =========================================================================
 
+        const DATA_FILE_PATH = "data.json";
+        let userToken = ""; // 画面から入力されたトークンを保持する変数
+        
         let adminData = { countries: [], items: [] };
         let currentShopId = null;
         let selectedItemId = null;
-        let dataFileSha = null; // GitHub上書き更新に必要
+        let dataFileSha = null;
 
-        // 初期読み込み
-        window.onload = async () => {
-            if (GITHUB_TOKEN === "ここにGitHubのPersonal Access Tokenを貼り付け") {
-                alert("コード内の GitHub Token 等の情報を設定してください。");
-                return;
+        // --- ログイン処理 ---
+        async function login() {
+            const tokenInput = document.getElementById('input-token').value;
+            if (!tokenInput) return alert("トークンを入力してください。");
+            
+            userToken = tokenInput; // トークンを変数に記憶（画面を閉じると消えます）
+            
+            try {
+                // トークンが正しいかテスト通信
+                const res = await fetch(`https://api.github.com/user`, {
+                    headers: { 'Authorization': `token ${userToken}` }
+                });
+                
+                if (res.ok) {
+                    document.getElementById('login-modal').style.display = 'none';
+                    await initAdmin(); // 管理画面の初期化へ
+                } else {
+                    alert("トークンが間違っているか、権限がありません。");
+                    userToken = ""; // リセット
+                }
+            } catch (e) {
+                alert("通信エラーが発生しました。");
             }
+        }
+
+        // --- 管理画面の初期化 ---
+        async function initAdmin() {
             await fetchGitHubData();
+            await fetchSalesData(); // GASから売上を取得
             updateShopSelector();
             if (adminData.countries.length > 0) {
                 document.getElementById('shop-selector').value = adminData.countries[0].id;
                 changeShop();
             }
-        };
+        }
 
-        // GitHubから data.json を取得
-        async function fetchGitHubData() {
+        // --- GASから売上合計を取得 ---
+        async function fetchSalesData() {
+            if (GAS_URL === "ここにGASのウェブアプリURLを貼り付けてください") return;
             try {
-                const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DATA_FILE_PATH}`, {
-                    headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
-                });
-                if (res.status === 404) {
-                    adminData = { countries: [], items: [] }; // 新規作成
-                    return;
-                }
+                const res = await fetch(GAS_URL); // GET通信
                 const json = await res.json();
-                dataFileSha = json.sha; // 更新用にSHAを保持
-                const decoded = decodeURIComponent(escape(atob(json.content)));
-                adminData = JSON.parse(decoded);
+                if (json.sales !== undefined) {
+                    document.getElementById('info-sales').textContent = json.sales.toLocaleString();
+                }
             } catch (e) {
-                console.error("データ取得エラー", e);
+                console.error("売上取得エラー:", e);
+                document.getElementById('info-sales').textContent = "エラー";
             }
         }
 
-        // GitHubへ data.json を保存
+        // --- 以下、前回と同じGitHubデータの取得・保存・プレビュー処理 ---
+        
+        async function fetchGitHubData() {
+            try {
+                const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DATA_FILE_PATH}`, {
+                    headers: { 'Authorization': `token ${userToken}` } // 記憶したトークンを使用
+                });
+                if (res.status === 404) { adminData = { countries: [], items: [] }; return; }
+                const json = await res.json();
+                dataFileSha = json.sha;
+                const decoded = decodeURIComponent(escape(atob(json.content)));
+                adminData = JSON.parse(decoded);
+            } catch (e) { console.error("データ取得エラー", e); }
+        }
+
         async function saveDataToGitHub() {
             try {
                 const contentStr = JSON.stringify(adminData, null, 2);
                 const encoded = btoa(unescape(encodeURIComponent(contentStr)));
-                const body = {
-                    message: "Update data.json via Admin",
-                    content: encoded,
-                    sha: dataFileSha
-                };
+                const body = { message: "Update data.json via Admin", content: encoded, sha: dataFileSha };
                 
                 const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DATA_FILE_PATH}`, {
                     method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${GITHUB_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Authorization': `token ${userToken}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
                 });
                 
                 const resJson = await res.json();
                 dataFileSha = resJson.content.sha;
                 alert("保存が完了しました！");
-            } catch (e) {
-                alert("保存に失敗しました。");
-                console.error(e);
-            }
+            } catch (e) { alert("保存に失敗しました。"); console.error(e); }
         }
 
-        // 画像をGitHubにアップロードしてURLを返す
         async function uploadImageToGitHub(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -184,19 +223,16 @@
                     try {
                         await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
                             method: 'PUT',
-                            headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+                            headers: { 'Authorization': `token ${userToken}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ message: "Upload image", content: base64Data })
                         });
-                        resolve(path); // View.htmlから読み込める相対パス
-                    } catch (err) {
-                        reject(err);
-                    }
+                        resolve(path);
+                    } catch (err) { reject(err); }
                 };
                 reader.readAsDataURL(file);
             });
         }
 
-        // UI更新処理
         function updateShopSelector() {
             const selector = document.getElementById('shop-selector');
             selector.innerHTML = '<option value="">ショップを変更</option>';
@@ -215,7 +251,7 @@
                 document.getElementById('info-country-name').textContent = country.name;
                 document.getElementById('input-country-name').value = country.name;
             }
-            selectedItemId = null; // ショップ変更時は選択解除
+            selectedItemId = null;
             clearItemInputs();
             renderPreview();
         }
@@ -245,7 +281,6 @@
             document.getElementById('info-item-count').textContent = itemCount;
         }
 
-        // 国家操作
         function addCountry() {
             const newId = `country_${Date.now()}`;
             adminData.countries.push({ id: newId, name: "新規国家" });
@@ -273,13 +308,12 @@
             document.getElementById('shop-selector').value = currentShopId;
         }
 
-        // 商品操作
         function selectItem(item) {
             selectedItemId = item.id;
             document.getElementById('input-item-name').value = item.name;
             document.getElementById('input-item-desc').value = item.description;
             document.getElementById('input-item-price').value = item.price;
-            document.getElementById('input-item-image').value = ""; // file inputはリセット
+            document.getElementById('input-item-image').value = "";
             renderPreview();
         }
 
@@ -304,20 +338,16 @@
             if (imageFile) {
                 try {
                     imagePath = await uploadImageToGitHub(imageFile);
-                } catch (e) {
-                    return alert("画像のアップロードに失敗しました。");
-                }
+                } catch (e) { return alert("画像のアップロードに失敗しました。"); }
             }
 
             if (selectedItemId) {
-                // 更新
                 const item = adminData.items.find(i => i.id === selectedItemId);
                 item.name = name;
                 item.description = desc;
                 item.price = price;
                 if (imagePath) item.image = imagePath;
             } else {
-                // 新規追加
                 adminData.items.push({
                     id: `item_${Date.now()}`,
                     countryId: currentShopId,
