@@ -99,8 +99,8 @@
         </div>
     </div>
 
-    <div id="preview-area">
-        <div class="preview-title">商品一覧を表示する所</div>
+    <div id="preview-area" onclick="handleBackgroundClick(event)">
+        <div class="preview-title">商品一覧表示</div>
         <div id="preview-grid"></div>
     </div>
 
@@ -309,12 +309,32 @@
         }
 
         function selectItem(item) {
+            // 【変更点】すでに選択されている商品をもう一度クリックした場合は、選択を解除する
+            if (selectedItemId === item.id) {
+                selectedItemId = null;
+                clearItemInputs();
+                renderPreview();
+                return;
+            }
+
             selectedItemId = item.id;
             document.getElementById('input-item-name').value = item.name;
             document.getElementById('input-item-desc').value = item.description;
             document.getElementById('input-item-price').value = item.price;
             document.getElementById('input-item-image').value = "";
             renderPreview();
+        }
+
+        // 【新規追加】背景（何もないところ）をクリックした時に選択を解除する関数
+        function handleBackgroundClick(event) {
+            // クリックした要素が商品カード（.item-card）の外側だった場合のみ解除する
+            if (!event.target.closest('.item-card')) {
+                if (selectedItemId !== null) {
+                    selectedItemId = null;
+                    clearItemInputs();
+                    renderPreview();
+                }
+            }
         }
 
         function clearItemInputs() {
