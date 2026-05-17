@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>管理サイト</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* 左側：操作パネル */
+        #control-panel { width: 350px; display: flex; flex-direction: column; border-right: 2px solid #333; overflow-y: auto; }
+        .panel-section { padding: 15px; border-bottom: 2px solid #333; }
+        
+        /* 配色再現 */
+        .color-purple { background-color: #ccccff; }
+        .color-cyan { background-color: #ccffff; }
+        .color-green { background-color: #ccffcc; }
+        .color-yellow { background-color: #ffffcc; }
+        
+        h3 { margin-bottom: 10px; font-size: 1rem; }
+        .input-group { margin-bottom: 10px; }
+        .input-group input, .input-group textarea, .input-group select { width: 100%; padding: 8px; border: 1px solid #333; }
+        .btn { padding: 8px 12px; background: #fff; border: 1px solid #333; cursor: pointer; font-weight: bold; }
+        .btn:hover { background: #eee; }
+        .btn-save { background-color: #4CAF50; color: white; float: right; }
+        
+        /* 右側：プレビュー領域 */
+        #preview-area { flex-grow: 1; background-color: #ffcccc; padding: 20px; overflow-y: auto; }
+        .preview-title { text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; -webkit-text-stroke: 1px white; }
+        
+        #preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+        .item-card { background-color: #fff; border: 1px solid #333; display: flex; flex-direction: column; height: 250px; position: relative; }
+        .item-name { text-align: center; padding: 10px; border-bottom: 1px solid #333; font-weight: bold; }
+        .item-content { flex-grow: 1; padding: 10px; text-align: center; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; overflow: hidden; }
+        .item-content img { max-width: 100%; max-height: 100px; object-fit: contain; }
+        .item-price { width: 100%; padding: 15px; background-color: #f9f9f9; border-top: 1px solid #333; text-align: center; font-weight: bold; }
+        
+        /* 選択状態 */
+        .selected-card { border: 3px solid red; }
+    </style>
+</head>
+<body>
+
+    <div id="control-panel">
+        <div class="panel-section color-purple">
+            <button class="btn btn-save" onclick="saveDataToGitHub()">変更内容<br>保存ボタン</button>
+            <p><strong>国家データ</strong></p>
+            <p>国家名：<span id="info-country-name">未選択</span></p>
+            <p>本日の売り上げ：<span id="info-sales">---</span> 円</p>
+            <p>商品数：<span id="info-item-count">0</span></p>
+        </div>
+
+        <div class="panel-section color-cyan">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="btn" onclick="addCountry()">国家追加</button>
+                <button class="btn" onclick="deleteCountry()">国家削除</button>
+            </div>
+            <div class="input-group">
+                <input type="text" id="input-country-name" placeholder="国名入力欄">
+            </div>
+            <button class="btn" onclick="updateCountryName()" style="width: 100%;">国名更新</button>
+        </div>
+
+        <div class="panel-section color-green">
+            <div class="input-group">
+                <input type="text" id="input-item-name" placeholder="商品名">
+            </div>
+            <div class="input-group">
+                <textarea id="input-item-desc" placeholder="説明文" rows="3"></textarea>
+            </div>
+            <div class="input-group">
+                <label style="font-size: 0.8rem;">もしくは画像ファイル</label>
+                <input type="file" id="input-item-image" accept="image/*">
+            </div>
+            <div class="input-group">
+                <input type="number" id="input-item-price" placeholder="値段">
+            </div>
+        </div>
+
+        <div class="panel-section color-yellow">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="btn" onclick="saveItem()">商品追加/更新</button>
+                <button class="btn" onclick="deleteItem()">選択した商品を削除</button>
+            </div>
+            <div class="input-group">
+                <select id="shop-selector" onchange="changeShop()">
+                    <option value="">ショップを変更</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div id="preview-area">
+        <div class="preview-title">商品一覧を表示する所</div>
+        <div id="preview-grid"></div>
+    </div>
+
+    <script>
+        // =========================================================
+        // 【▼ 要変更 ▼】 GitHubリポジトリの情報を入力してください
+        // =========================================================
+        const GITHUB_TOKEN = "ここにGitHubのPersonal Access Tokenを貼り付け";
+        const REPO_OWNER = "あなたのGitHubユーザー名";
+        const REPO_NAME = "リポジトリ名";
+        const DATA_FILE_PATH = "data.json";
+        // =========================================================
+
+        let adminData = { countries: [], items: [] };
+        let currentShopId = null;
+        let selectedItemId = null;
+        let dataFileSha = null; // GitHub上書き更新に必要
+
+        // 初期読み込み
+        window.onload = async () => {
+            if (GITHUB_TOKEN === "ここにGitHubのPersonal Access Tokenを貼り付け") {
+                alert("コード内の GitHub Token 等の情報を設定してください。");
+                return;
+            }
+            await fetchGitHubData();
+            updateShopSelector();
+            if (adminData.countries.length > 0) {
+                document.getElementById('shop-selector').value = adminData.countries[0].id;
+                changeShop();
+            }
+        };
+
+        // GitHubから data.json を取得
+        async function fetchGitHubData() {
+            try {
+                const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DATA_FILE_PATH}`, {
+                    headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+                });
+                if (res.status === 404) {
+                    adminData = { countries: [], items: [] }; // 新規作成
+                    return;
+                }
+                const json = await res.json();
+                dataFileSha = json.sha; // 更新用にSHAを保持
+                const decoded = decodeURIComponent(escape(atob(json.content)));
+                adminData = JSON.parse(decoded);
+            } catch (e) {
+                console.error("データ取得エラー", e);
+            }
+        }
+
+        // GitHubへ data.json を保存
+        async function saveDataToGitHub() {
+            try {
+                const contentStr = JSON.stringify(adminData, null, 2);
+                const encoded = btoa(unescape(encodeURIComponent(contentStr)));
+                const body = {
+                    message: "Update data.json via Admin",
+                    content: encoded,
+                    sha: dataFileSha
+                };
+                
+                const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DATA_FILE_PATH}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                
+                const resJson = await res.json();
+                dataFileSha = resJson.content.sha;
+                alert("保存が完了しました！");
+            } catch (e) {
+                alert("保存に失敗しました。");
+                console.error(e);
+            }
+        }
+
+        // 画像をGitHubにアップロードしてURLを返す
+        async function uploadImageToGitHub(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const base64Data = e.target.result.split(',')[1];
+                    const fileName = `img_${Date.now()}.png`;
+                    const path = `image/${fileName}`;
+                    
+                    try {
+                        await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
+                            method: 'PUT',
+                            headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ message: "Upload image", content: base64Data })
+                        });
+                        resolve(path); // View.htmlから読み込める相対パス
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // UI更新処理
+        function updateShopSelector() {
+            const selector = document.getElementById('shop-selector');
+            selector.innerHTML = '<option value="">ショップを変更</option>';
+            adminData.countries.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.name;
+                selector.appendChild(opt);
+            });
+        }
+
+        function changeShop() {
+            currentShopId = document.getElementById('shop-selector').value;
+            const country = adminData.countries.find(c => c.id === currentShopId);
+            if (country) {
+                document.getElementById('info-country-name').textContent = country.name;
+                document.getElementById('input-country-name').value = country.name;
+            }
+            selectedItemId = null; // ショップ変更時は選択解除
+            clearItemInputs();
+            renderPreview();
+        }
+
+        function renderPreview() {
+            const grid = document.getElementById('preview-grid');
+            grid.innerHTML = '';
+            let itemCount = 0;
+
+            if (currentShopId) {
+                const items = adminData.items.filter(i => i.countryId === currentShopId);
+                itemCount = items.length;
+                items.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = `item-card ${item.id === selectedItemId ? 'selected-card' : ''}`;
+                    card.onclick = () => selectItem(item);
+                    
+                    const content = item.image ? `<img src="${item.image}" alt="">` : `<p>${item.description}</p>`;
+                    card.innerHTML = `
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-content">${content}</div>
+                        <div class="item-price">${item.price} 円</div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+            document.getElementById('info-item-count').textContent = itemCount;
+        }
+
+        // 国家操作
+        function addCountry() {
+            const newId = `country_${Date.now()}`;
+            adminData.countries.push({ id: newId, name: "新規国家" });
+            updateShopSelector();
+            document.getElementById('shop-selector').value = newId;
+            changeShop();
+        }
+
+        function deleteCountry() {
+            if (!currentShopId || !confirm("本当にこの国家を削除しますか？")) return;
+            adminData.countries = adminData.countries.filter(c => c.id !== currentShopId);
+            adminData.items = adminData.items.filter(i => i.countryId !== currentShopId);
+            currentShopId = null;
+            updateShopSelector();
+            renderPreview();
+        }
+
+        function updateCountryName() {
+            if (!currentShopId) return;
+            const newName = document.getElementById('input-country-name').value;
+            const c = adminData.countries.find(c => c.id === currentShopId);
+            if (c) c.name = newName;
+            document.getElementById('info-country-name').textContent = newName;
+            updateShopSelector();
+            document.getElementById('shop-selector').value = currentShopId;
+        }
+
+        // 商品操作
+        function selectItem(item) {
+            selectedItemId = item.id;
+            document.getElementById('input-item-name').value = item.name;
+            document.getElementById('input-item-desc').value = item.description;
+            document.getElementById('input-item-price').value = item.price;
+            document.getElementById('input-item-image').value = ""; // file inputはリセット
+            renderPreview();
+        }
+
+        function clearItemInputs() {
+            document.getElementById('input-item-name').value = "";
+            document.getElementById('input-item-desc').value = "";
+            document.getElementById('input-item-price').value = "";
+            document.getElementById('input-item-image').value = "";
+        }
+
+        async function saveItem() {
+            if (!currentShopId) return alert("ショップを選択してください。");
+            
+            const name = document.getElementById('input-item-name').value;
+            const desc = document.getElementById('input-item-desc').value;
+            const price = parseInt(document.getElementById('input-item-price').value, 10);
+            const imageFile = document.getElementById('input-item-image').files[0];
+
+            if (!name || isNaN(price)) return alert("商品名と値段を正しく入力してください。");
+
+            let imagePath = "";
+            if (imageFile) {
+                try {
+                    imagePath = await uploadImageToGitHub(imageFile);
+                } catch (e) {
+                    return alert("画像のアップロードに失敗しました。");
+                }
+            }
+
+            if (selectedItemId) {
+                // 更新
+                const item = adminData.items.find(i => i.id === selectedItemId);
+                item.name = name;
+                item.description = desc;
+                item.price = price;
+                if (imagePath) item.image = imagePath;
+            } else {
+                // 新規追加
+                adminData.items.push({
+                    id: `item_${Date.now()}`,
+                    countryId: currentShopId,
+                    name: name,
+                    description: desc,
+                    image: imagePath,
+                    price: price
+                });
+            }
+            
+            clearItemInputs();
+            selectedItemId = null;
+            renderPreview();
+        }
+
+        function deleteItem() {
+            if (!selectedItemId) return;
+            adminData.items = adminData.items.filter(i => i.id !== selectedItemId);
+            selectedItemId = null;
+            clearItemInputs();
+            renderPreview();
+        }
+    </script>
+</body>
+</html>
