@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>世界経済サイト(仮称)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; background-color: #f4f4f4; color: #333; }
+        
+        /* ヘッダー */
+        header { display: flex; justify-content: space-between; padding: 15px 20px; background-color: #fff; border-bottom: 2px solid #ccc; }
+        .header-right { text-align: right; font-size: 1.2rem; font-weight: bold; }
+        #finish-btn { margin-top: 10px; padding: 8px 16px; background-color: #ff4d4d; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        
+        /* レイアウト */
+        .container { display: flex; height: calc(100vh - 80px); }
+        
+        /* 国家一覧 */
+        #country-list { width: 200px; background-color: #e9e9e9; border-right: 2px solid #ccc; padding: 10px; overflow-y: auto; }
+        .country-btn { width: 100%; padding: 15px; margin-bottom: 10px; font-size: 1.2rem; background-color: #fff; border: 1px solid #999; cursor: pointer; }
+        .country-btn.active { background-color: #ddd; font-weight: bold; }
+        
+        /* 商品一覧 */
+        #item-grid { flex-grow: 1; padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; overflow-y: auto; align-content: start; }
+        .item-card { background-color: #fff; border: 1px solid #333; display: flex; flex-direction: column; height: 250px; }
+        .item-name { text-align: center; padding: 10px; border-bottom: 1px solid #333; font-weight: bold; }
+        .item-content { flex-grow: 1; padding: 10px; text-align: center; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; overflow: hidden; }
+        .item-content img { max-width: 100%; max-height: 100px; object-fit: contain; }
+        .item-price-btn { width: 100%; padding: 15px; background-color: #f9f9f9; border-top: 1px solid #333; border: none; cursor: pointer; font-weight: bold; font-size: 1.1rem; }
+        .item-price-btn:hover { background-color: #eee; }
+        
+        /* モーダル */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal.hidden { display: none; }
+        .modal-content { background-color: black; color: white; padding: 40px; text-align: center; border: 2px solid white; width: 90%; max-width: 500px; }
+        .modal-content input { width: 100%; padding: 10px; margin: 20px 0; font-size: 1.2rem; text-align: center; }
+        .modal-content button { padding: 10px 40px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin: 5px; }
+        #result-text { width: 100%; height: 150px; margin: 20px 0; color: black; padding: 10px; font-size: 1rem; }
+        
+        /* スマホ対応 */
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
+            #country-list { width: 100%; height: auto; border-right: none; border-bottom: 2px solid #ccc; display: flex; overflow-x: auto; white-space: nowrap; }
+            .country-btn { width: auto; margin-bottom: 0; margin-right: 10px; flex-shrink: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="start-modal" class="modal">
+        <div class="modal-content">
+            <h2>【所持金を入力してください。】</h2>
+            <input type="number" id="initial-money-input" placeholder="金額を入力" min="0">
+            <button id="start-btn">開始</button>
+        </div>
+    </div>
+
+    <div id="result-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>購入結果</h2>
+            <textarea id="result-text" readonly></textarea>
+            <button id="copy-btn">結果をコピー</button>
+            <button id="close-result-btn">閉じる</button>
+        </div>
+    </div>
+
+    <header>
+        <div class="header-left">
+            <h1>世界経済サイト(仮称)</h1>
+            <p>今いる所: <span id="current-country-display">未選択</span></p>
+        </div>
+        <div class="header-right">
+            <p>所持金: <span id="money-display">0</span></p>
+            <p>使用金額: <span id="spent-display">0</span></p>
+            <button id="finish-btn">買い物を終了して結果を見る</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <aside id="country-list"></aside>
+        <main id="item-grid"></main>
+    </div>
+
+    <script>
+        // =========================================================
+        // 【▼ 要変更 ▼】 GAS（Google Apps Script）のWebアプリURL
+        // =========================================================
+        const GAS_URL = "ここにGASのURLを貼り付けてください";
+        // =========================================================
+
+        let currentMoney = 0;
+        let spentMoney = 0;
+        let siteData = { countries: [], items: [] };
+        let purchasedItems = [];
+
+        // 初期化処理：data.jsonを読み込む
+        async function loadData() {
+            try {
+                // GitHub Pages上にある data.json を読み込む
+                const response = await fetch('data.json');
+                if (!response.ok) throw new Error("データの読み込みに失敗しました");
+                siteData = await response.json();
+            } catch (error) {
+                console.error(error);
+                // 読み込めなかった場合のフォールバック（テスト用空データ）
+                siteData = { countries: [], items: [] };
+            }
+        }
+
+        // 開始ボタン処理
+        document.getElementById('start-btn').addEventListener('click', async () => {
+            const inputVal = parseInt(document.getElementById('initial-money-input').value, 10);
+            if (isNaN(inputVal) || inputVal < 0) return alert("正しい金額を入力してください。");
+            
+            currentMoney = inputVal;
+            updateDisplay();
+            document.getElementById('start-modal').classList.add('hidden');
+            
+            await loadData();
+            renderCountryList();
+            if (siteData.countries.length > 0) selectCountry(siteData.countries[0].id);
+        });
+
+        function updateDisplay() {
+            document.getElementById('money-display').textContent = currentMoney.toLocaleString();
+            document.getElementById('spent-display').textContent = spentMoney.toLocaleString();
+        }
+
+        function renderCountryList() {
+            const listEl = document.getElementById('country-list');
+            listEl.innerHTML = '';
+            siteData.countries.forEach(country => {
+                const btn = document.createElement('button');
+                btn.className = 'country-btn';
+                btn.textContent = country.name;
+                btn.onclick = () => selectCountry(country.id);
+                listEl.appendChild(btn);
+            });
+        }
+
+        function selectCountry(countryId) {
+            const country = siteData.countries.find(c => c.id === countryId);
+            if(!country) return;
+            document.getElementById('current-country-display').textContent = country.name;
+
+            document.querySelectorAll('.country-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent === country.name);
+            });
+
+            const gridEl = document.getElementById('item-grid');
+            gridEl.innerHTML = '';
+            const items = siteData.items.filter(item => item.countryId === countryId);
+
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                const content = item.image ? `<img src="${item.image}" alt="">` : `<p>${item.description}</p>`;
+                card.innerHTML = `
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-content">${content}</div>
+                    <button class="item-price-btn" onclick="buyItem('${item.id}')">${item.price.toLocaleString()} 購入</button>
+                `;
+                gridEl.appendChild(card);
+            });
+        }
+
+        window.buyItem = function(itemId) {
+            const item = siteData.items.find(i => i.id === itemId);
+            if (!item || currentMoney < item.price) return alert("所持金が足りません！");
+
+            currentMoney -= item.price;
+            spentMoney += item.price;
+            updateDisplay();
+
+            const countryName = siteData.countries.find(c => c.id === item.countryId).name;
+            purchasedItems.push(`【${countryName}】${item.name} (${item.price}円)`);
+
+            // GASへデータ送信
+            if (GAS_URL !== "ここにGASのURLを貼り付けてください") {
+                fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ countryId: item.countryId, countryName: countryName, itemName: item.name, price: item.price })
+                }).catch(e => console.error(e));
+            }
+        };
+
+        // 終了処理
+        document.getElementById('finish-btn').addEventListener('click', () => {
+            let res = `--- お買い物結果 ---\n最終所持金: ${currentMoney}円\n総使用金額: ${spentMoney}円\n\n【購入した商品】\n`;
+            res += purchasedItems.length ? purchasedItems.join('\n') : "何も購入しませんでした。";
+            document.getElementById('result-text').value = res;
+            document.getElementById('result-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('copy-btn').addEventListener('click', () => {
+            document.getElementById('result-text').select();
+            document.execCommand('copy');
+            alert("コピーしました！");
+        });
+        document.getElementById('close-result-btn').addEventListener('click', () => document.getElementById('result-modal').classList.add('hidden'));
+    </script>
+</body>
+</html>
