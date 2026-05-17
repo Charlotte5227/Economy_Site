@@ -31,13 +31,14 @@
         .item-price-btn:hover { background-color: #eee; }
         
         /* ショッピングカート */
-        #shopping-cart { width: 250px; background-color: #fff; border-left: 2px solid #ccc; display: flex; flex-direction: column; flex-shrink: 0; }
+        #shopping-cart { width: 270px; background-color: #fff; border-left: 2px solid #ccc; display: flex; flex-direction: column; flex-shrink: 0; }
         .cart-header { padding: 15px; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center; }
         #cart-items { flex-grow: 1; overflow-y: auto; padding: 10px; }
         .cart-item { border: 1px solid #ccc; margin-bottom: 10px; padding: 10px; background-color: #fafafa; }
         .cart-item-name { font-size: 0.9rem; font-weight: bold; margin-bottom: 5px; }
         .cart-item-controls { display: flex; align-items: center; justify-content: space-between; }
-        .cart-item-controls button { width: 25px; height: 25px; cursor: pointer; }
+        .cart-item-controls button { width: 25px; height: 25px; cursor: pointer; font-weight: bold; }
+        .cart-item-qty { width: 50px; text-align: center; font-size: 1rem; margin: 0 5px; padding: 2px; } /* 個数入力欄のデザイン */
         .cart-footer { padding: 15px; border-top: 1px solid #ccc; text-align: center; font-weight: bold; }
         #checkout-btn { width: 100%; padding: 15px; margin-top: 10px; background-color: #4CAF50; color: white; border: none; font-size: 1.2rem; cursor: pointer; }
         #checkout-btn:disabled { background-color: #cccccc; cursor: not-allowed; }
@@ -46,22 +47,19 @@
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; }
         .modal.hidden { display: none; }
         .modal-content { background-color: black; color: white; padding: 40px; text-align: center; border: 2px solid white; width: 90%; max-width: 500px; }
-        .modal-content input { width: 100%; padding: 10px; margin: 20px 0; font-size: 1.2rem; text-align: center; }
-        .modal-content button { padding: 10px 40px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin: 5px; }
-        #result-text { width: 100%; height: 150px; margin: 20px 0; color: black; padding: 10px; font-size: 1rem; }
+        .modal-content input[type="number"] { width: 100%; padding: 10px; margin: 20px 0; font-size: 1.2rem; text-align: center; }
+        .modal-content button { padding: 10px 20px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin: 5px; }
+        #result-text { width: 100%; height: 200px; margin: 20px 0; color: black; padding: 10px; font-size: 1rem; font-family: monospace; }
         
-        /* スマホ用レスポンシブ対応（画面幅が768px以下の場合） */
+        /* スマホ用レスポンシブ対応 */
         .hidden-pc { display: none; }
 
         @media (max-width: 768px) {
-            /* ヘッダーの文字ズレ防止（縦並びにしてスッキリさせる） */
             header { flex-direction: column; align-items: center; text-align: center; padding: 10px; }
             .header-right { text-align: center; margin-top: 10px; }
             
-            /* コンテナの並び替え */
             .container { flex-direction: column; height: auto; }
             
-            /* ▼ ここがポイント：国家一覧を完璧な横スクロールバーにする ▼ */
             #country-list {
                 width: 100%; height: auto; border-right: none; border-bottom: 2px solid #ccc;
                 display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto;
@@ -69,18 +67,15 @@
             }
             .country-btn { width: auto; margin-bottom: 0; margin-right: 10px; flex-shrink: 0; white-space: nowrap; }
 
-            /* ▼ スマホ用カートの追加CSS ▼ */
             .hidden-pc { display: block; }
             #close-cart-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
             
-            /* カートはスマホ時は全画面オーバーレイになる */
             #shopping-cart {
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
                 z-index: 2000; display: none;
             }
             #shopping-cart.open { display: flex; }
             
-            /* スマホ用フローティングカートボタン */
             #mobile-cart-btn {
                 position: fixed; bottom: 20px; right: 20px; padding: 15px 30px;
                 background-color: #ff9800; color: white; border: none; border-radius: 30px;
@@ -98,9 +93,18 @@
         </div>
     </div>
 
+    <div id="post-purchase-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>購入が完了しました！</h2>
+            <p style="margin: 20px 0;">引き続き買い物を続けますか？</p>
+            <button id="continue-shopping-btn" style="background-color: #4CAF50; color: white; border: none;">買い物を続ける</button>
+            <button id="finish-shopping-btn" style="background-color: #ff4d4d; color: white; border: none;">終了して結果を見る</button>
+        </div>
+    </div>
+
     <div id="result-modal" class="modal hidden">
         <div class="modal-content">
-            <h2>購入結果</h2>
+            <h2>お買い物結果</h2>
             <textarea id="result-text" readonly></textarea>
             <button id="copy-btn">結果をコピー</button>
             <button id="close-result-btn">閉じる</button>
@@ -141,12 +145,8 @@
 
     <script>
         // ===================================================================================
-        // 【★★★ 絶対に変更が必要な箇所 ★★★】 
-        // 以下のURLを、あなたがGASで「新しいデプロイ」をして取得したウェブアプリのURLに書き換えてください。
-        // ===================================================================================
-        
+        // GASウェブアプリのURLをここに貼り付けてください
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzwKCQbkKFs-WcxUBkxaF1xGWVRueg4aNUHkLwcmiSA7slNznaUGaqVVc6xt3tFTmyLLA/exec";
-        
         // ===================================================================================
 
         let currentMoney = 0;
@@ -157,7 +157,7 @@
         let cart = []; 
         let purchasedItems = []; 
 
-        // 初期化処理：data.jsonを読み込む
+        // 初期化処理
         async function loadData() {
             try {
                 const response = await fetch('data.json');
@@ -169,7 +169,6 @@
             }
         }
 
-        // 開始ボタン処理
         document.getElementById('start-btn').addEventListener('click', async () => {
             const inputVal = parseInt(document.getElementById('initial-money-input').value, 10);
             if (isNaN(inputVal) || inputVal < 0) return alert("正しい金額を入力してください。");
@@ -227,7 +226,7 @@
         }
 
         // ==========================================
-        // カート機能
+        // カート機能（個数手入力対応）
         // ==========================================
         window.addToCart = function(itemId) {
             const itemData = siteData.items.find(i => i.id === itemId);
@@ -248,12 +247,36 @@
             renderCart();
         };
 
+        // ＋/－ボタンからの変更処理
         window.updateCartQuantity = function(itemId, change) {
             const item = cart.find(i => i.id === itemId);
             if (item) {
                 item.quantity += change;
                 if (item.quantity <= 0) {
                     cart = cart.filter(i => i.id !== itemId);
+                }
+                renderCart();
+            }
+        };
+
+        // 【新規】手入力による個数変更処理
+        window.handleQuantityInput = function(itemId, newValue) {
+            const qty = parseInt(newValue, 10);
+            
+            // バリデーション：数字以外やマイナスの場合はエラー
+            if (isNaN(qty) || qty < 0) {
+                alert("正しい個数を入力してください（0以上の数字）。");
+                renderCart(); // 元の正しい値で画面を再描画して入力を戻す
+                return;
+            }
+
+            const item = cart.find(i => i.id === itemId);
+            if (item) {
+                if (qty === 0) {
+                    // 0を入力した場合はカートから削除
+                    cart = cart.filter(i => i.id !== itemId);
+                } else {
+                    item.quantity = qty;
                 }
                 renderCart();
             }
@@ -271,13 +294,14 @@
                 
                 const div = document.createElement('div');
                 div.className = 'cart-item';
+                // 個数表示部分を input type="number" に変更
                 div.innerHTML = `
                     <div class="cart-item-name">【${item.countryName}】${item.name}</div>
                     <div class="cart-item-controls">
                         <span>${item.price.toLocaleString()}円</span>
-                        <div>
+                        <div style="display: flex; align-items: center;">
                             <button onclick="updateCartQuantity('${item.id}', -1)">-</button>
-                            <span>${item.quantity}個</span>
+                            <input type="number" class="cart-item-qty" value="${item.quantity}" min="0" onchange="handleQuantityInput('${item.id}', this.value)">
                             <button onclick="updateCartQuantity('${item.id}', 1)">+</button>
                         </div>
                     </div>
@@ -289,7 +313,9 @@
             document.getElementById('cart-count').textContent = count;
         }
 
-        // 購入ボタン処理（GASへの一括送信を含む）
+        // ==========================================
+        // 購入処理と購入後のフロー
+        // ==========================================
         document.getElementById('checkout-btn').addEventListener('click', async () => {
             if (cart.length === 0) return alert('カートは空です。');
             
@@ -303,14 +329,11 @@
 
             try {
                 if (GAS_URL) {
-                    // カートの中身をまるごと送信
                     const response = await fetch(GAS_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify({ items: cart })
                     });
-                    
-                    // ※エラーなく送信できたら決済完了とする
                     if (!response.ok) throw new Error("送信エラー");
                 }
 
@@ -319,7 +342,7 @@
                 spentMoney += totalCost;
                 updateDisplay();
 
-                // 購入履歴へ合算
+                // 購入履歴へ合算（過去に買った商品があれば個数を足す、なければ追加する）
                 cart.forEach(cartItem => {
                     const existing = purchasedItems.find(p => p.id === cartItem.id);
                     if (existing) {
@@ -331,7 +354,12 @@
 
                 cart = [];
                 renderCart();
-                alert('購入しました！');
+                
+                // スマホの場合はカートを閉じる
+                document.getElementById('shopping-cart').classList.remove('open');
+                
+                // 【新規】購入完了ポップアップを表示
+                document.getElementById('post-purchase-modal').classList.remove('hidden');
 
             } catch (error) {
                 console.error(error);
@@ -340,6 +368,17 @@
                 checkoutBtn.disabled = false;
                 checkoutBtn.textContent = "購入";
             }
+        });
+
+        // 【新規】購入完了ポップアップ内のボタン処理
+        document.getElementById('continue-shopping-btn').addEventListener('click', () => {
+            document.getElementById('post-purchase-modal').classList.add('hidden');
+        });
+
+        document.getElementById('finish-shopping-btn').addEventListener('click', () => {
+            document.getElementById('post-purchase-modal').classList.add('hidden');
+            // ヘッダーにある「買い物を終了して結果を見る」ボタンの処理を呼び出す
+            document.getElementById('finish-btn').click();
         });
 
         // スマホ用カート開閉
