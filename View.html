@@ -17,7 +17,7 @@
         .container { display: flex; height: calc(100vh - 80px); }
         
         /* 国家一覧 */
-        #country-list { width: 200px; background-color: #e9e9e9; border-right: 2px solid #ccc; padding: 10px; overflow-y: auto; }
+        #country-list { width: 200px; background-color: #e9e9e9; border-right: 2px solid #ccc; padding: 10px; overflow-y: auto; flex-shrink: 0; }
         .country-btn { width: 100%; padding: 15px; margin-bottom: 10px; font-size: 1.2rem; background-color: #fff; border: 1px solid #999; cursor: pointer; }
         .country-btn.active { background-color: #ddd; font-weight: bold; }
         
@@ -30,6 +30,18 @@
         .item-price-btn { width: 100%; padding: 15px; background-color: #f9f9f9; border-top: 1px solid #333; border: none; cursor: pointer; font-weight: bold; font-size: 1.1rem; }
         .item-price-btn:hover { background-color: #eee; }
         
+        /* ショッピングカート */
+        #shopping-cart { width: 250px; background-color: #fff; border-left: 2px solid #ccc; display: flex; flex-direction: column; flex-shrink: 0; }
+        .cart-header { padding: 15px; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center; }
+        #cart-items { flex-grow: 1; overflow-y: auto; padding: 10px; }
+        .cart-item { border: 1px solid #ccc; margin-bottom: 10px; padding: 10px; background-color: #fafafa; }
+        .cart-item-name { font-size: 0.9rem; font-weight: bold; margin-bottom: 5px; }
+        .cart-item-controls { display: flex; align-items: center; justify-content: space-between; }
+        .cart-item-controls button { width: 25px; height: 25px; cursor: pointer; }
+        .cart-footer { padding: 15px; border-top: 1px solid #ccc; text-align: center; font-weight: bold; }
+        #checkout-btn { width: 100%; padding: 15px; margin-top: 10px; background-color: #4CAF50; color: white; border: none; font-size: 1.2rem; cursor: pointer; }
+        #checkout-btn:disabled { background-color: #cccccc; cursor: not-allowed; }
+
         /* モーダル */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; }
         .modal.hidden { display: none; }
@@ -38,46 +50,41 @@
         .modal-content button { padding: 10px 40px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin: 5px; }
         #result-text { width: 100%; height: 150px; margin: 20px 0; color: black; padding: 10px; font-size: 1rem; }
         
-        /* スマホ用のレスポンシブ対応（画面幅が768px以下の場合） */
+        /* スマホ用レスポンシブ対応（画面幅が768px以下の場合） */
+        .hidden-pc { display: none; }
+
         @media (max-width: 768px) {
             /* ヘッダーの文字ズレ防止（縦並びにしてスッキリさせる） */
-            header {
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-                padding: 10px;
-            }
-            .header-right {
-                text-align: center;
-                margin-top: 10px;
-            }
+            header { flex-direction: column; align-items: center; text-align: center; padding: 10px; }
+            .header-right { text-align: center; margin-top: 10px; }
             
             /* コンテナの並び替え */
-            .container {
-                flex-direction: column;
-            }
+            .container { flex-direction: column; height: auto; }
             
             /* ▼ ここがポイント：国家一覧を完璧な横スクロールバーにする ▼ */
             #country-list {
-                width: 100%;
-                height: auto;
-                border-right: none;
-                border-bottom: 2px solid #ccc;
-                display: flex;
-                flex-direction: row; /* 強制的に横並びにする */
-                flex-wrap: nowrap; /* ボタンが下に折り返されるのを絶対に防ぐ */
-                overflow-x: auto; /* 横スクロールをオンにする */
-                overflow-y: hidden; /* 縦スクロールを完全にオフにする */
-                -webkit-overflow-scrolling: touch; /* スマホの指でのスクロールを滑らかにする魔法のコード */
-                padding: 10px;
+                width: 100%; height: auto; border-right: none; border-bottom: 2px solid #ccc;
+                display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto;
+                overflow-y: hidden; -webkit-overflow-scrolling: touch; padding: 10px;
             }
+            .country-btn { width: auto; margin-bottom: 0; margin-right: 10px; flex-shrink: 0; white-space: nowrap; }
+
+            /* ▼ スマホ用カートの追加CSS ▼ */
+            .hidden-pc { display: block; }
+            #close-cart-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
             
-            .country-btn {
-                width: auto;
-                margin-bottom: 0;
-                margin-right: 10px;
-                flex-shrink: 0; /* 画面幅に合わせてボタンが勝手に縮むのを防ぐ */
-                white-space: nowrap; /* 国名が2行に改行されるのを防ぐ */
+            /* カートはスマホ時は全画面オーバーレイになる */
+            #shopping-cart {
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                z-index: 2000; display: none;
+            }
+            #shopping-cart.open { display: flex; }
+            
+            /* スマホ用フローティングカートボタン */
+            #mobile-cart-btn {
+                position: fixed; bottom: 20px; right: 20px; padding: 15px 30px;
+                background-color: #ff9800; color: white; border: none; border-radius: 30px;
+                font-size: 1.2rem; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 1000;
             }
         }
     </style>
@@ -114,8 +121,23 @@
 
     <div class="container">
         <aside id="country-list"></aside>
+        
         <main id="item-grid"></main>
+
+        <aside id="shopping-cart">
+            <div class="cart-header">
+                <h2>ショッピングカート</h2>
+                <button id="close-cart-btn" class="hidden-pc">✕</button>
+            </div>
+            <div id="cart-items"></div>
+            <div class="cart-footer">
+                <p>合計: <span id="cart-total">0</span>円</p>
+                <button id="checkout-btn">購入</button>
+            </div>
+        </aside>
     </div>
+
+    <button id="mobile-cart-btn" class="hidden-pc">カート (<span id="cart-count">0</span>)</button>
 
     <script>
         // ===================================================================================
@@ -130,18 +152,19 @@
         let currentMoney = 0;
         let spentMoney = 0;
         let siteData = { countries: [], items: [] };
-        let purchasedItems = [];
+        
+        // カートと購入履歴の管理
+        let cart = []; 
+        let purchasedItems = []; 
 
         // 初期化処理：data.jsonを読み込む
         async function loadData() {
             try {
-                // 同じ階層にある data.json を読み込む
                 const response = await fetch('data.json');
                 if (!response.ok) throw new Error("データの読み込みに失敗しました");
                 siteData = await response.json();
             } catch (error) {
                 console.error(error);
-                // 読み込めなかった場合のフォールバック
                 siteData = { countries: [], items: [] };
             }
         }
@@ -197,37 +220,151 @@
                 card.innerHTML = `
                     <div class="item-name">${item.name}</div>
                     <div class="item-content">${content}</div>
-                    <button class="item-price-btn" onclick="buyItem('${item.id}')">${item.price.toLocaleString()} 購入</button>
+                    <button class="item-price-btn" onclick="addToCart('${item.id}')">${item.price.toLocaleString()}円 カートに入れる</button>
                 `;
                 gridEl.appendChild(card);
             });
         }
 
-        window.buyItem = function(itemId) {
-            const item = siteData.items.find(i => i.id === itemId);
-            if (!item || currentMoney < item.price) return alert("所持金が足りません！");
+        // ==========================================
+        // カート機能
+        // ==========================================
+        window.addToCart = function(itemId) {
+            const itemData = siteData.items.find(i => i.id === itemId);
+            const countryData = siteData.countries.find(c => c.id === itemData.countryId);
+            
+            const existing = cart.find(cartItem => cartItem.id === itemId);
+            if (existing) {
+                existing.quantity += 1;
+            } else {
+                cart.push({
+                    id: itemData.id,
+                    name: itemData.name,
+                    countryName: countryData.name,
+                    price: itemData.price,
+                    quantity: 1
+                });
+            }
+            renderCart();
+        };
 
-            currentMoney -= item.price;
-            spentMoney += item.price;
-            updateDisplay();
-
-            const countryName = siteData.countries.find(c => c.id === item.countryId).name;
-            purchasedItems.push(`【${countryName}】${item.name} (${item.price}円)`);
-
-            // GASへデータ送信
-            if (GAS_URL) {
-                fetch(GAS_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ countryId: item.countryId, countryName: countryName, itemName: item.name, price: item.price })
-                }).catch(e => console.error(e));
+        window.updateCartQuantity = function(itemId, change) {
+            const item = cart.find(i => i.id === itemId);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) {
+                    cart = cart.filter(i => i.id !== itemId);
+                }
+                renderCart();
             }
         };
 
-        // 終了処理
+        function renderCart() {
+            const cartItemsEl = document.getElementById('cart-items');
+            cartItemsEl.innerHTML = '';
+            let total = 0;
+            let count = 0;
+
+            cart.forEach(item => {
+                total += item.price * item.quantity;
+                count += item.quantity;
+                
+                const div = document.createElement('div');
+                div.className = 'cart-item';
+                div.innerHTML = `
+                    <div class="cart-item-name">【${item.countryName}】${item.name}</div>
+                    <div class="cart-item-controls">
+                        <span>${item.price.toLocaleString()}円</span>
+                        <div>
+                            <button onclick="updateCartQuantity('${item.id}', -1)">-</button>
+                            <span>${item.quantity}個</span>
+                            <button onclick="updateCartQuantity('${item.id}', 1)">+</button>
+                        </div>
+                    </div>
+                `;
+                cartItemsEl.appendChild(div);
+            });
+
+            document.getElementById('cart-total').textContent = total.toLocaleString();
+            document.getElementById('cart-count').textContent = count;
+        }
+
+        // 購入ボタン処理（GASへの一括送信を含む）
+        document.getElementById('checkout-btn').addEventListener('click', async () => {
+            if (cart.length === 0) return alert('カートは空です。');
+            
+            let totalCost = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            if (currentMoney < totalCost) return alert('所持金が足りません！');
+
+            const checkoutBtn = document.getElementById('checkout-btn');
+            checkoutBtn.disabled = true;
+            checkoutBtn.textContent = "処理中...";
+
+            try {
+                if (GAS_URL) {
+                    // カートの中身をまるごと送信
+                    const response = await fetch(GAS_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ items: cart })
+                    });
+                    
+                    // ※エラーなく送信できたら決済完了とする
+                    if (!response.ok) throw new Error("送信エラー");
+                }
+
+                // 決済処理
+                currentMoney -= totalCost;
+                spentMoney += totalCost;
+                updateDisplay();
+
+                // 購入履歴へ合算
+                cart.forEach(cartItem => {
+                    const existing = purchasedItems.find(p => p.id === cartItem.id);
+                    if (existing) {
+                        existing.quantity += cartItem.quantity;
+                    } else {
+                        purchasedItems.push({...cartItem}); 
+                    }
+                });
+
+                cart = [];
+                renderCart();
+                alert('購入しました！');
+
+            } catch (error) {
+                console.error(error);
+                alert('売上データの送信に失敗しました。');
+            } finally {
+                checkoutBtn.disabled = false;
+                checkoutBtn.textContent = "購入";
+            }
+        });
+
+        // スマホ用カート開閉
+        document.getElementById('mobile-cart-btn').addEventListener('click', () => {
+            document.getElementById('shopping-cart').classList.add('open');
+        });
+        document.getElementById('close-cart-btn').addEventListener('click', () => {
+            document.getElementById('shopping-cart').classList.remove('open');
+        });
+
+        // ==========================================
+        // 終了時の結果出力
+        // ==========================================
         document.getElementById('finish-btn').addEventListener('click', () => {
-            let res = `--- お買い物結果 ---\n最終所持金: ${currentMoney}円\n総使用金額: ${spentMoney}円\n\n【購入した商品】\n`;
-            res += purchasedItems.length ? purchasedItems.join('\n') : "何も購入しませんでした。";
+            let res = `--- お買い物結果 ---\n最終所持金: ${currentMoney.toLocaleString()}円\n総使用金額: ${spentMoney.toLocaleString()}円\n\n【購入した商品】\n`;
+            
+            if (purchasedItems.length === 0) {
+                res += "何も購入しませんでした。";
+            } else {
+                purchasedItems.forEach(item => {
+                    const itemTotal = item.price * item.quantity;
+                    res += `【${item.countryName}】${item.name} × ${item.quantity} (${itemTotal.toLocaleString()}円)\n`;
+                });
+            }
+            
             document.getElementById('result-text').value = res;
             document.getElementById('result-modal').classList.remove('hidden');
         });
@@ -237,7 +374,10 @@
             document.execCommand('copy');
             alert("コピーしました！");
         });
-        document.getElementById('close-result-btn').addEventListener('click', () => document.getElementById('result-modal').classList.add('hidden'));
+        
+        document.getElementById('close-result-btn').addEventListener('click', () => {
+            document.getElementById('result-modal').classList.add('hidden');
+        });
     </script>
 </body>
 </html>
