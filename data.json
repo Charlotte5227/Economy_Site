@@ -29,6 +29,14 @@
       "description": "真っ白な神様",
       "image": "image/img_1778997443671.png",
       "price": 5000
+    },
+    {
+      "id": "item_1778998114778",
+      "countryId": "country_1778995569456",
+      "name": "国旗",
+      "description": "画像と説明を同時に書いた場合の処理確認",
+      "image": "image/img_1778998113204.png",
+      "price": 100
     }
   ]
 }
