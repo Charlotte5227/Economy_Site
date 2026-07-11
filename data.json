@@ -1,54 +1,9 @@
 {
   "countries": [
     {
-      "id": "country_1778995569456",
-      "name": "テスト国"
-    },
-    {
-      "id": "country_1778998151969",
-      "name": "テスト国その２"
+      "id": "country_1783782843526",
+      "name": "エリーナ中央独裁国"
     }
   ],
-  "items": [
-    {
-      "id": "item_1778995604069",
-      "countryId": "country_1778995569456",
-      "name": "夜景",
-      "description": "",
-      "image": "image/img_1778997341220.png",
-      "price": 500
-    },
-    {
-      "id": "item_1778997384888",
-      "countryId": "country_1778995569456",
-      "name": "テスト",
-      "description": "テスト、商品内容更新時の処理確認",
-      "image": "",
-      "price": 200
-    },
-    {
-      "id": "item_1778997446249",
-      "countryId": "country_1778995569456",
-      "name": "白紙の神",
-      "description": "真っ白な神様",
-      "image": "image/img_1778997443671.png",
-      "price": 5000
-    },
-    {
-      "id": "item_1778998114778",
-      "countryId": "country_1778995569456",
-      "name": "国旗",
-      "description": "画像と説明を同時に書いた場合の処理確認",
-      "image": "image/img_1778998113204.png",
-      "price": 100
-    },
-    {
-      "id": "item_1778998183662",
-      "countryId": "country_1778998151969",
-      "name": "複数国家ある場合の処理確認",
-      "description": "上記の通り",
-      "image": "",
-      "price": 500
-    }
-  ]
+  "items": []
 }
