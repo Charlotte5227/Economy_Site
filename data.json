@@ -5,5 +5,14 @@
       "name": "エリーナ中央独裁国"
     }
   ],
-  "items": []
+  "items": [
+    {
+      "id": "item_1783782896781",
+      "countryId": "country_1783782843526",
+      "name": "商品A",
+      "description": "",
+      "image": "image/img_1783782893146.png",
+      "price": 1000000
+    }
+  ]
 }
